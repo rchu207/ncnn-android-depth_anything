@@ -15,6 +15,7 @@
 #include <android/asset_manager_jni.h>
 #include <android/native_window_jni.h>
 #include <android/native_window.h>
+#include <android/bitmap.h>
 
 #include <android/log.h>
 
@@ -28,8 +29,6 @@
 
 #include "dpt.h"
 
-#include "ndkcamera.h"
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -37,118 +36,124 @@
 #include <arm_neon.h>
 #endif // __ARM_NEON
 
-static int draw_unsupported(cv::Mat& rgb)
-{
-    const char text[] = "unsupported";
-
-    int baseLine = 0;
-    cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 1.0, 1, &baseLine);
-
-    int y = (rgb.rows - label_size.height) / 2;
-    int x = (rgb.cols - label_size.width) / 2;
-
-    cv::rectangle(rgb, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)),
-                    cv::Scalar(255, 255, 255), -1);
-
-    cv::putText(rgb, text, cv::Point(x, y + label_size.height),
-                cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0));
-
-    return 0;
-}
-
-static int draw_fps(cv::Mat& rgb)
-{
-    // resolve moving average
-    float avg_fps = 0.f;
-    {
-        static double t0 = 0.f;
-        static float fps_history[10] = {0.f};
-
-        double t1 = ncnn::get_current_time();
-        if (t0 == 0.f)
-        {
-            t0 = t1;
-            return 0;
-        }
-
-        float fps = 1000.f / (t1 - t0);
-        t0 = t1;
-
-        for (int i = 9; i >= 1; i--)
-        {
-            fps_history[i] = fps_history[i - 1];
-        }
-        fps_history[0] = fps;
-
-        if (fps_history[9] == 0.f)
-        {
-            return 0;
-        }
-
-        for (int i = 0; i < 10; i++)
-        {
-            avg_fps += fps_history[i];
-        }
-        avg_fps /= 10.f;
-    }
-
-    char text[32];
-    sprintf(text, "FPS=%.2f", avg_fps);
-
-    int baseLine = 0;
-    cv::Size label_size = cv::getTextSize(text, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-
-    int y = 0;
-    int x = rgb.cols - label_size.width;
-
-    cv::rectangle(rgb, cv::Rect(cv::Point(x, y), cv::Size(label_size.width, label_size.height + baseLine)),
-                    cv::Scalar(255, 255, 255), -1);
-
-    cv::putText(rgb, text, cv::Point(x, y + label_size.height),
-                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
-
-    return 0;
-}
-
 static Dpt* g_dpt = 0;
 static ncnn::Mutex lock;
 
-class MyNdkCamera : public NdkCameraWindow
-{
-public:
-    virtual void on_image_render(cv::Mat& rgb) const;
-};
-
-void MyNdkCamera::on_image_render(cv::Mat& rgb) const
-{
-    // dpt
-    {
-        ncnn::MutexLockGuard g(lock);
-
-        if (g_dpt)
-        {
-            cv::Mat depth_color;
-            g_dpt->detect(rgb, depth_color);
-            g_dpt->draw(rgb, depth_color);
-        }
-        else
-        {
-            draw_unsupported(rgb);
-        }
-    }
-
-    draw_fps(rgb);
-}
-
-static MyNdkCamera* g_camera = 0;
-
 extern "C" {
+
+//static void onImageAvailable(void* context, AImageReader* reader)
+//{
+//    // setup imagereader and its surface
+////    AImageReader_new(640, 480, AIMAGE_FORMAT_YUV_420_888, /*maxImages*/2, &image_reader);
+//
+//    int32_t format;
+//    AImage_getFormat(image, &format);
+//
+//    int32_t width = 0;
+//    int32_t height = 0;
+//    AImage_getWidth(image, &width);
+//    AImage_getHeight(image, &height);
+//
+//    int32_t y_pixelStride = 0;
+//    int32_t u_pixelStride = 0;
+//    int32_t v_pixelStride = 0;
+//    AImage_getPlanePixelStride(image, 0, &y_pixelStride);
+//    AImage_getPlanePixelStride(image, 1, &u_pixelStride);
+//    AImage_getPlanePixelStride(image, 2, &v_pixelStride);
+//
+//    int32_t y_rowStride = 0;
+//    int32_t u_rowStride = 0;
+//    int32_t v_rowStride = 0;
+//    AImage_getPlaneRowStride(image, 0, &y_rowStride);
+//    AImage_getPlaneRowStride(image, 1, &u_rowStride);
+//    AImage_getPlaneRowStride(image, 2, &v_rowStride);
+//
+//    uint8_t* y_data = 0;
+//    uint8_t* u_data = 0;
+//    uint8_t* v_data = 0;
+//    int y_len = 0;
+//    int u_len = 0;
+//    int v_len = 0;
+//    AImage_getPlaneData(image, 0, &y_data, &y_len);
+//    AImage_getPlaneData(image, 1, &u_data, &u_len);
+//    AImage_getPlaneData(image, 2, &v_data, &v_len);
+//
+//    ((NdkCamera*)context)->on_image((unsigned char*)y_data, (int)width, (int)height);
+//
+//    const unsigned char* nv21 = y_data;
+//    int nv21_width = width;
+//    int nv21_height = height;
+//
+//    cv::Mat nv21_rotated(h + h / 2, w, CV_8UC1);
+//    ncnn::kanna_rotate_yuv420sp(nv21, nv21_width, nv21_height, nv21_rotated.data, w, h, rotate_type);
+//
+//    // nv21_rotated to rgb
+//    cv::Mat rgb(h, w, CV_8UC3);
+//    ncnn::yuv420sp2rgb(nv21_rotated.data, w, h, rgb.data);
+//
+//    // crop and rotate nv21
+//    cv::Mat nv21_croprotated(roi_h + roi_h / 2, roi_w, CV_8UC1);
+//    {
+//        const unsigned char* srcY = nv21 + nv21_roi_y * nv21_width + nv21_roi_x;
+//        unsigned char* dstY = nv21_croprotated.data;
+//        ncnn::kanna_rotate_c1(srcY, nv21_roi_w, nv21_roi_h, nv21_width, dstY, roi_w, roi_h, roi_w, rotate_type);
+//
+//        const unsigned char* srcUV = nv21 + nv21_width * nv21_height + nv21_roi_y * nv21_width / 2 + nv21_roi_x;
+//        unsigned char* dstUV = nv21_croprotated.data + roi_w * roi_h;
+//        ncnn::kanna_rotate_c2(srcUV, nv21_roi_w / 2, nv21_roi_h / 2, nv21_width, dstUV, roi_w / 2, roi_h / 2, roi_w, rotate_type);
+//    }
+//
+//    // nv21_croprotated to rgb
+//    cv::Mat rgb(roi_h, roi_w, CV_8UC3);
+//    ncnn::yuv420sp2rgb(nv21_croprotated.data, roi_w, roi_h, rgb.data);
+//
+//    on_image_render(rgb);
+//
+//    // rotate to native window orientation
+//    cv::Mat rgb_render(render_h, render_w, CV_8UC3);
+//    ncnn::kanna_rotate_c3(rgb.data, roi_w, roi_h, rgb_render.data, render_w, render_h, render_rotate_type);
+//
+//    // scale to target size
+//    if (buf.format == AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM || buf.format == AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM)
+//    {
+//        for (int y = 0; y < render_h; y++)
+//        {
+//            const unsigned char* ptr = rgb_render.ptr<const unsigned char>(y);
+//            unsigned char* outptr = (unsigned char*)buf.bits + buf.stride * 4 * y;
+//
+//            int x = 0;
+//#if __ARM_NEON
+//            for (; x + 7 < render_w; x += 8)
+//            {
+//                uint8x8x3_t _rgb = vld3_u8(ptr);
+//                uint8x8x4_t _rgba;
+//                _rgba.val[0] = _rgb.val[0];
+//                _rgba.val[1] = _rgb.val[1];
+//                _rgba.val[2] = _rgb.val[2];
+//                _rgba.val[3] = vdup_n_u8(255);
+//                vst4_u8(outptr, _rgba);
+//
+//                ptr += 24;
+//                outptr += 32;
+//            }
+//#endif // __ARM_NEON
+//            for (; x < render_w; x++)
+//            {
+//                outptr[0] = ptr[0];
+//                outptr[1] = ptr[1];
+//                outptr[2] = ptr[2];
+//                outptr[3] = 255;
+//
+//                ptr += 3;
+//                outptr += 4;
+//            }
+//        }
+//    }
+//}
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved)
 {
     __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "JNI_OnLoad");
-
-    g_camera = new MyNdkCamera;
 
     return JNI_VERSION_1_4;
 }
@@ -163,9 +168,6 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved)
         delete g_dpt;
         g_dpt = 0;
     }
-
-    delete g_camera;
-    g_camera = 0;
 }
 
 // public native boolean loadModel(AssetManager mgr, int modelid, int cpugpu);
@@ -229,39 +231,39 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_loadModel(JNIEnv* env, jobje
     return JNI_TRUE;
 }
 
-// public native boolean openCamera(int facing);
-JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_openCamera(JNIEnv* env, jobject thiz, jint facing)
+// public native Bitmap infer(Bitmap bitmap);
+JNIEXPORT jobject JNICALL Java_com_tencent_dpt_Dpt_infer(JNIEnv* env, jobject thiz, jobject bitmap)
 {
-    if (facing < 0 || facing > 1)
-        return JNI_FALSE;
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "infer");
 
-    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "openCamera %d", facing);
+    ncnn::MutexLockGuard g(lock);
 
-    g_camera->open((int)facing);
+    double start_time = ncnn::get_current_time();
 
-    return JNI_TRUE;
-}
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, bitmap, &info);
+    int width = info.width;
+    int height = info.height;
+    if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888)
+        return NULL;
 
-// public native boolean closeCamera();
-JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_closeCamera(JNIEnv* env, jobject thiz)
-{
-    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "closeCamera");
+    // ncnn from bitmap
+    ncnn::Mat in = ncnn::Mat::from_android_bitmap_resize(env, bitmap, ncnn::Mat::PIXEL_BGR, 300, 300);
 
-    g_camera->close();
+    if (g_dpt)
+    {
+        // nv21_croprotated to rgb
+        int roi_h = 512;
+        int roi_w = 512;
+        cv::Mat rgb(roi_h, roi_w, CV_8UC3);
+//        ncnn::yuv420sp2rgb(nv21_croprotated.data, roi_w, roi_h, rgb.data);
 
-    return JNI_TRUE;
-}
+        cv::Mat depth_color;
+        g_dpt->detect(rgb, depth_color);
+        g_dpt->draw(rgb, depth_color);
+    }
 
-// public native boolean setOutputWindow(Surface surface);
-JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_setOutputWindow(JNIEnv* env, jobject thiz, jobject surface)
-{
-    ANativeWindow* win = ANativeWindow_fromSurface(env, surface);
-
-    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "setOutputWindow %p", win);
-
-    g_camera->set_window(win);
-
-    return JNI_TRUE;
+    return NULL;
 }
 
 }

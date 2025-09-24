@@ -73,6 +73,7 @@ public class MainActivity extends Activity {
                     return;
 
                 // FIXME: get depth by cpu
+                dpt.infer(yourSelectedImage);
 //                MobilenetSSDNcnn.Obj[] objects = mobilenetssdncnn.Detect(yourSelectedImage, false);
 //                showObjects(objects);
             }
