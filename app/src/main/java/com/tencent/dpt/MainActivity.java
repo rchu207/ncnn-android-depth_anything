@@ -14,27 +14,27 @@
 
 package com.tencent.dpt;
 
-import android.Manifest;
 import android.app.Activity;
-import android.content.pm.PackageManager;
-import android.graphics.PixelFormat;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.Spinner;
 
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
+import java.io.FileNotFoundException;
 
-public class MainActivity extends Activity implements SurfaceHolder.Callback
-{
-    public static final int REQUEST_CAMERA = 100;
+public class MainActivity extends Activity {
+    private static final int SELECT_IMAGE = 1;
+
+    private ImageView imageView;
+    private Bitmap bitmap = null;
+    private Bitmap yourSelectedImage = null;
 
     private Dpt dpt = new Dpt();
     private int facing = 0;
@@ -44,119 +44,192 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
     private int current_model = 0;
     private int current_cpugpu = 0;
 
-    private SurfaceView cameraView;
 
-    /** Called when the activity is first created. */
+    /**
+     * Called when the activity is first created.
+     */
     @Override
-    public void onCreate(Bundle savedInstanceState)
-    {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        imageView = (ImageView) findViewById(R.id.imageView);
 
-        cameraView = (SurfaceView) findViewById(R.id.cameraview);
-
-        cameraView.getHolder().setFormat(PixelFormat.RGBA_8888);
-        cameraView.getHolder().addCallback(this);
-
-        Button buttonSwitchCamera = (Button) findViewById(R.id.buttonSwitchCamera);
-        buttonSwitchCamera.setOnClickListener(new View.OnClickListener() {
+        Button buttonImage = (Button) findViewById(R.id.buttonImage);
+        buttonImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View arg0) {
+                Intent i = new Intent(Intent.ACTION_PICK);
+                i.setType("image/*");
+                startActivityForResult(i, SELECT_IMAGE);
+            }
+        });
 
-                int new_facing = 1 - facing;
+        Button buttonDetect = (Button) findViewById(R.id.buttonDetect);
+        buttonDetect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View arg0) {
+                if (yourSelectedImage == null)
+                    return;
 
-                dpt.closeCamera();
+                // FIXME: get depth by cpu
+//                MobilenetSSDNcnn.Obj[] objects = mobilenetssdncnn.Detect(yourSelectedImage, false);
+//                showObjects(objects);
+            }
+        });
 
-                dpt.openCamera(new_facing);
+        Button buttonDetectGPU = (Button) findViewById(R.id.buttonDetectGPU);
+        buttonDetectGPU.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View arg0) {
+                if (yourSelectedImage == null)
+                    return;
 
-                facing = new_facing;
+                // FIXME: get depth by gpu
+//                MobilenetSSDNcnn.Obj[] objects = mobilenetssdncnn.Detect(yourSelectedImage, true);
+//                showObjects(objects);
             }
         });
 
         spinnerModel = (Spinner) findViewById(R.id.spinnerModel);
         spinnerModel.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id)
-            {
-                if (position != current_model)
-                {
+            public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id) {
+                if (position != current_model) {
                     current_model = position;
                     reload();
                 }
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> arg0)
-            {
+            public void onNothingSelected(AdapterView<?> arg0) {
             }
         });
 
         spinnerCPUGPU = (Spinner) findViewById(R.id.spinnerCPUGPU);
         spinnerCPUGPU.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id)
-            {
-                if (position != current_cpugpu)
-                {
+            public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id) {
+                if (position != current_cpugpu) {
                     current_cpugpu = position;
                     reload();
                 }
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> arg0)
-            {
+            public void onNothingSelected(AdapterView<?> arg0) {
             }
         });
 
         reload();
     }
 
-    private void reload()
-    {
+    private void reload() {
         boolean ret_init = dpt.loadModel(getAssets(), current_model, current_cpugpu);
-        if (!ret_init)
-        {
+        if (!ret_init) {
             Log.e("MainActivity", "dpt loadModel failed");
         }
     }
 
+//    private void showObjects(MobilenetSSDNcnn.Obj[] objects)
+//    {
+//        if (objects == null)
+//        {
+//            imageView.setImageBitmap(bitmap);
+//            return;
+//        }
+//
+//        // draw objects on bitmap
+//        Bitmap rgba = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+//
+//        Canvas canvas = new Canvas(rgba);
+//
+//        Paint paint = new Paint();
+//        paint.setColor(Color.BLUE);
+//        paint.setStyle(Paint.Style.STROKE);
+//        paint.setStrokeWidth(4);
+//
+//        Paint textbgpaint = new Paint();
+//        textbgpaint.setColor(Color.WHITE);
+//        textbgpaint.setStyle(Paint.Style.FILL);
+//
+//        Paint textpaint = new Paint();
+//        textpaint.setColor(Color.BLACK);
+//        textpaint.setTextSize(26);
+//        textpaint.setTextAlign(Paint.Align.LEFT);
+//
+//        for (int i = 0; i < objects.length; i++)
+//        {
+//            canvas.drawRect(objects[i].x, objects[i].y, objects[i].x + objects[i].w, objects[i].y + objects[i].h, paint);
+//
+//            // draw filled text inside image
+//            {
+//                String text = objects[i].label + " = " + String.format("%.1f", objects[i].prob * 100) + "%";
+//
+//                float text_width = textpaint.measureText(text);
+//                float text_height = - textpaint.ascent() + textpaint.descent();
+//
+//                float x = objects[i].x;
+//                float y = objects[i].y - text_height;
+//                if (y < 0)
+//                    y = 0;
+//                if (x + text_width > rgba.getWidth())
+//                    x = rgba.getWidth() - text_width;
+//
+//                canvas.drawRect(x, y, x + text_width, y + text_height, textbgpaint);
+//
+//                canvas.drawText(text, x, y - textpaint.ascent(), textpaint);
+//            }
+//        }
+//
+//        imageView.setImageBitmap(rgba);
+//    }
+
     @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
-    {
-        dpt.setOutputWindow(holder.getSurface());
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == RESULT_OK && null != data) {
+            Uri selectedImage = data.getData();
+
+            try {
+                if (requestCode == SELECT_IMAGE) {
+                    bitmap = decodeUri(selectedImage);
+                    yourSelectedImage = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+                    imageView.setImageBitmap(bitmap);
+                }
+            } catch (FileNotFoundException e) {
+                Log.e("MainActivity", "FileNotFoundException");
+                return;
+            }
+        }
     }
 
-    @Override
-    public void surfaceCreated(SurfaceHolder holder)
-    {
-    }
+    private Bitmap decodeUri(Uri selectedImage) throws FileNotFoundException {
+        // Decode image size
+        BitmapFactory.Options o = new BitmapFactory.Options();
+        o.inJustDecodeBounds = true;
+        BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, o);
 
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder)
-    {
-    }
+        // The new size we want to scale to
+        final int REQUIRED_SIZE = 400;
 
-    @Override
-    public void onResume()
-    {
-        super.onResume();
-
-        if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_DENIED)
-        {
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.CAMERA}, REQUEST_CAMERA);
+        // Find the correct scale value. It should be the power of 2.
+        int width_tmp = o.outWidth, height_tmp = o.outHeight;
+        int scale = 1;
+        while (true) {
+            if (width_tmp / 2 < REQUIRED_SIZE
+                    || height_tmp / 2 < REQUIRED_SIZE) {
+                break;
+            }
+            width_tmp /= 2;
+            height_tmp /= 2;
+            scale *= 2;
         }
 
-        dpt.openCamera(facing);
-    }
-
-    @Override
-    public void onPause()
-    {
-        super.onPause();
-
-        dpt.closeCamera();
+        // Decode with inSampleSize
+        BitmapFactory.Options o2 = new BitmapFactory.Options();
+        o2.inSampleSize = scale;
+        return BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, o2);
     }
 }
