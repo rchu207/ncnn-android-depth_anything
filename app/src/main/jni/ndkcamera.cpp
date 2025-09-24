@@ -482,43 +482,44 @@ void NdkCameraWindow::on_image(const unsigned char* nv21, int nv21_width, int nv
             ASensorEventQueue_enableSensor(sensor_event_queue, accelerometer_sensor);
         }
 
-        int id = ALooper_pollAll(0, 0, 0, 0);
-        if (id == NDKCAMERAWINDOW_ID)
-        {
-            ASensorEvent e[8];
-            ssize_t num_event = 0;
-            while (ASensorEventQueue_hasEvents(sensor_event_queue) == 1)
-            {
-                num_event = ASensorEventQueue_getEvents(sensor_event_queue, e, 8);
-                if (num_event < 0)
-                    break;
-            }
-
-            if (num_event > 0)
-            {
-                float acceleration_x = e[num_event - 1].acceleration.x;
-                float acceleration_y = e[num_event - 1].acceleration.y;
-                float acceleration_z = e[num_event - 1].acceleration.z;
-//                 __android_log_print(ANDROID_LOG_WARN, "NdkCameraWindow", "x = %f, y = %f, z = %f", x, y, z);
-
-                if (acceleration_y > 7)
-                {
-                    accelerometer_orientation = 0;
-                }
-                if (acceleration_x < -7)
-                {
-                    accelerometer_orientation = 90;
-                }
-                if (acceleration_y < -7)
-                {
-                    accelerometer_orientation = 180;
-                }
-                if (acceleration_x > 7)
-                {
-                    accelerometer_orientation = 270;
-                }
-            }
-        }
+        // FIXME: 'ALooper_pollAll' is unavailable: obsoleted in Android 1
+//        int id = ALooper_pollAll(0, 0, 0, 0);
+//        if (id == NDKCAMERAWINDOW_ID)
+//        {
+//            ASensorEvent e[8];
+//            ssize_t num_event = 0;
+//            while (ASensorEventQueue_hasEvents(sensor_event_queue) == 1)
+//            {
+//                num_event = ASensorEventQueue_getEvents(sensor_event_queue, e, 8);
+//                if (num_event < 0)
+//                    break;
+//            }
+//
+//            if (num_event > 0)
+//            {
+//                float acceleration_x = e[num_event - 1].acceleration.x;
+//                float acceleration_y = e[num_event - 1].acceleration.y;
+//                float acceleration_z = e[num_event - 1].acceleration.z;
+////                 __android_log_print(ANDROID_LOG_WARN, "NdkCameraWindow", "x = %f, y = %f, z = %f", x, y, z);
+//
+//                if (acceleration_y > 7)
+//                {
+//                    accelerometer_orientation = 0;
+//                }
+//                if (acceleration_x < -7)
+//                {
+//                    accelerometer_orientation = 90;
+//                }
+//                if (acceleration_y < -7)
+//                {
+//                    accelerometer_orientation = 180;
+//                }
+//                if (acceleration_x > 7)
+//                {
+//                    accelerometer_orientation = 270;
+//                }
+//            }
+//        }
     }
 
     // roi crop and rotate nv21

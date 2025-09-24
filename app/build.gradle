@@ -1,19 +1,19 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 24
-    buildToolsVersion "29.0.2"
+    compileSdkVersion 36
+    namespace "com.tencent.dpt"
 
     defaultConfig {
         applicationId "com.tencent.dpt"
         archivesBaseName = "$applicationId"
 
-        minSdkVersion 24
+        minSdk 33
     }
 
     externalNativeBuild {
         cmake {
-            version "3.10.2"
+            version "3.22.1"
             path file('src/main/jni/CMakeLists.txt')
         }
     }
