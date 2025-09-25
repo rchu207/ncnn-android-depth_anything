@@ -242,28 +242,42 @@ JNIEXPORT jobject JNICALL Java_com_tencent_dpt_Dpt_infer(JNIEnv* env, jobject th
 
     AndroidBitmapInfo info;
     AndroidBitmap_getInfo(env, bitmap, &info);
-    int width = info.width;
-    int height = info.height;
     if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888)
-        return NULL;
-
-    // ncnn from bitmap
-    ncnn::Mat in = ncnn::Mat::from_android_bitmap_resize(env, bitmap, ncnn::Mat::PIXEL_BGR, 300, 300);
+        return nullptr;
 
     if (g_dpt)
     {
-        // nv21_croprotated to rgb
-        int roi_h = 512;
-        int roi_w = 512;
-        cv::Mat rgb(roi_h, roi_w, CV_8UC3);
-//        ncnn::yuv420sp2rgb(nv21_croprotated.data, roi_w, roi_h, rgb.data);
+        // ncnn from bitmap
+        int target_size = g_dpt->get_target_size();
+        int width = info.width;
+        int height = info.height;
 
-        cv::Mat depth_color;
-        g_dpt->detect(rgb, depth_color);
-        g_dpt->draw(rgb, depth_color);
+        // pad to multiple of 32
+        int w = width;
+        int h = height;
+        float scale = 1.f;
+        if (w > h)
+        {
+            scale = (float)target_size / w;
+            w = target_size;
+            h = h * scale;
+        }
+        else
+        {
+            scale = (float)target_size / h;
+            h = target_size;
+            w = w * scale;
+        }
+
+        ncnn::Mat in = ncnn::Mat::from_android_bitmap_resize(env, bitmap, ncnn::Mat::PIXEL_BGR, w, h);
+        cv::Mat rgb;
+        ncnn::Mat depth_color;
+        g_dpt->detect(in, w, h, depth_color);
+
+        depth_color.to_android_bitmap(env, bitmap, ncnn::Mat::PIXEL_RGB);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 }

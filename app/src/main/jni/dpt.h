@@ -13,9 +13,9 @@ public:
 
     int load(AAssetManager* mgr, const char* modeltype, int target_size, const float* mean_vals, const float* norm_vals, bool use_gpu = false);
 
-    int detect(const cv::Mat& rgb, cv::Mat& depth_color);
+    int detect(const ncnn::Mat& in, int w, int h, ncnn::Mat& depth_color);
 
-    int draw(cv::Mat& rgb, cv::Mat& depth_color);
+    int get_target_size();
 
 private:
     ncnn::Net dpt_;

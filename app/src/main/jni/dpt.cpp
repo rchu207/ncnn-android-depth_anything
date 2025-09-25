@@ -51,30 +51,8 @@ int Dpt::load(AAssetManager* mgr, const char* modeltype, int _target_size, const
     return 0;
 }
 
-int Dpt::detect(const cv::Mat& rgb, cv::Mat& depth_color)
+int Dpt::detect(const ncnn::Mat& in, int w, int h, ncnn::Mat& depth_color)
 {
-    int width = rgb.cols;
-    int height = rgb.rows;
-
-    // pad to multiple of 32
-    int w = width;
-    int h = height;
-    float scale = 1.f;
-    if (w > h)
-    {
-        scale = (float)target_size_ / w;
-        w = target_size_;
-        h = h * scale;
-    }
-    else
-    {
-        scale = (float)target_size_ / h;
-        h = target_size_;
-        w = w * scale;
-    }
-
-    ncnn::Mat in = ncnn::Mat::from_pixels_resize(rgb.data, ncnn::Mat::PIXEL_RGB, width, height, w, h);
-
     // pad to target_size rectangle
     int wpad = target_size_ - w;
     int hpad = target_size_ - h;
@@ -93,14 +71,16 @@ int Dpt::detect(const cv::Mat& rgb, cv::Mat& depth_color)
     cv::Mat depth(out.h, out.w, CV_32FC1, (void*)out.data);
     cv::normalize(depth, depth, 0, 255, cv::NORM_MINMAX, CV_8UC1);
     cv::applyColorMap(depth, color_map_, cv::ColormapTypes::COLORMAP_INFERNO);
-    cv::resize(color_map_(cv::Rect(wpad / 2, hpad / 2, w, h)), depth_color, rgb.size());
+    cv::Mat resized_out;
+    cv::Size2i resized_out_size(w, h);
+    cv::resize(color_map_(cv::Rect(wpad / 2, hpad / 2, w, h)), resized_out, resized_out_size);
+
+    depth_color.to_pixels(resized_out.data, ncnn::Mat::PIXEL_BGR2RGB);
 
     return 0;
 }
 
-int Dpt::draw(cv::Mat& rgb, cv::Mat& depth_color)
+int Dpt::get_target_size()
 {
-    cv::cvtColor(depth_color, rgb, cv::COLOR_RGB2BGR);
-
-    return 0;
+    return target_size_;
 }

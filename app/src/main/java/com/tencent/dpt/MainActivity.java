@@ -72,23 +72,10 @@ public class MainActivity extends Activity {
                 if (yourSelectedImage == null)
                     return;
 
-                // FIXME: get depth by cpu
+                // TODO: run inference in thread.
                 dpt.infer(yourSelectedImage);
-//                MobilenetSSDNcnn.Obj[] objects = mobilenetssdncnn.Detect(yourSelectedImage, false);
-//                showObjects(objects);
-            }
-        });
-
-        Button buttonDetectGPU = (Button) findViewById(R.id.buttonDetectGPU);
-        buttonDetectGPU.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View arg0) {
-                if (yourSelectedImage == null)
-                    return;
-
-                // FIXME: get depth by gpu
-//                MobilenetSSDNcnn.Obj[] objects = mobilenetssdncnn.Detect(yourSelectedImage, true);
-//                showObjects(objects);
+                Bitmap bitmap = yourSelectedImage.copy(Bitmap.Config.ARGB_8888, true);
+                imageView.setImageBitmap(bitmap);
             }
         });
 
@@ -132,60 +119,6 @@ public class MainActivity extends Activity {
         }
     }
 
-//    private void showObjects(MobilenetSSDNcnn.Obj[] objects)
-//    {
-//        if (objects == null)
-//        {
-//            imageView.setImageBitmap(bitmap);
-//            return;
-//        }
-//
-//        // draw objects on bitmap
-//        Bitmap rgba = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-//
-//        Canvas canvas = new Canvas(rgba);
-//
-//        Paint paint = new Paint();
-//        paint.setColor(Color.BLUE);
-//        paint.setStyle(Paint.Style.STROKE);
-//        paint.setStrokeWidth(4);
-//
-//        Paint textbgpaint = new Paint();
-//        textbgpaint.setColor(Color.WHITE);
-//        textbgpaint.setStyle(Paint.Style.FILL);
-//
-//        Paint textpaint = new Paint();
-//        textpaint.setColor(Color.BLACK);
-//        textpaint.setTextSize(26);
-//        textpaint.setTextAlign(Paint.Align.LEFT);
-//
-//        for (int i = 0; i < objects.length; i++)
-//        {
-//            canvas.drawRect(objects[i].x, objects[i].y, objects[i].x + objects[i].w, objects[i].y + objects[i].h, paint);
-//
-//            // draw filled text inside image
-//            {
-//                String text = objects[i].label + " = " + String.format("%.1f", objects[i].prob * 100) + "%";
-//
-//                float text_width = textpaint.measureText(text);
-//                float text_height = - textpaint.ascent() + textpaint.descent();
-//
-//                float x = objects[i].x;
-//                float y = objects[i].y - text_height;
-//                if (y < 0)
-//                    y = 0;
-//                if (x + text_width > rgba.getWidth())
-//                    x = rgba.getWidth() - text_width;
-//
-//                canvas.drawRect(x, y, x + text_width, y + text_height, textbgpaint);
-//
-//                canvas.drawText(text, x, y - textpaint.ascent(), textpaint);
-//            }
-//        }
-//
-//        imageView.setImageBitmap(rgba);
-//    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -212,21 +145,21 @@ public class MainActivity extends Activity {
         o.inJustDecodeBounds = true;
         BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, o);
 
-        // The new size we want to scale to
+        // TODO: adjust new size we want to scale to
         final int REQUIRED_SIZE = 400;
 
         // Find the correct scale value. It should be the power of 2.
         int width_tmp = o.outWidth, height_tmp = o.outHeight;
         int scale = 1;
-        while (true) {
-            if (width_tmp / 2 < REQUIRED_SIZE
-                    || height_tmp / 2 < REQUIRED_SIZE) {
-                break;
-            }
-            width_tmp /= 2;
-            height_tmp /= 2;
-            scale *= 2;
-        }
+//        while (true) {
+//            if (width_tmp / 2 < REQUIRED_SIZE
+//                    || height_tmp / 2 < REQUIRED_SIZE) {
+//                break;
+//            }
+//            width_tmp /= 2;
+//            height_tmp /= 2;
+//            scale *= 2;
+//        }
 
         // Decode with inSampleSize
         BitmapFactory.Options o2 = new BitmapFactory.Options();
