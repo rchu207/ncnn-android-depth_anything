@@ -236,46 +236,43 @@ JNIEXPORT jobject JNICALL Java_com_tencent_dpt_Dpt_infer(JNIEnv* env, jobject th
 {
     __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "infer");
 
-    ncnn::MutexLockGuard g(lock);
-
-    double start_time = ncnn::get_current_time();
-
     AndroidBitmapInfo info;
     AndroidBitmap_getInfo(env, bitmap, &info);
     if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888)
         return nullptr;
 
-    if (g_dpt)
+    ncnn::MutexLockGuard g(lock);
+
+    if (g_dpt == nullptr)
+        return nullptr;
+
+    // ncnn from bitmap
+    int target_size = g_dpt->get_target_size();
+    int width = info.width;
+    int height = info.height;
+
+    // pad to multiple of 32
+    int w = width;
+    int h = height;
+    float scale = 1.f;
+    if (w > h)
     {
-        // ncnn from bitmap
-        int target_size = g_dpt->get_target_size();
-        int width = info.width;
-        int height = info.height;
-
-        // pad to multiple of 32
-        int w = width;
-        int h = height;
-        float scale = 1.f;
-        if (w > h)
-        {
-            scale = (float)target_size / w;
-            w = target_size;
-            h = h * scale;
-        }
-        else
-        {
-            scale = (float)target_size / h;
-            h = target_size;
-            w = w * scale;
-        }
-
-        ncnn::Mat in = ncnn::Mat::from_android_bitmap_resize(env, bitmap, ncnn::Mat::PIXEL_BGR, w, h);
-        cv::Mat rgb;
-        ncnn::Mat depth_color;
-        g_dpt->detect(in, w, h, depth_color);
-
-        depth_color.to_android_bitmap(env, bitmap, ncnn::Mat::PIXEL_RGB);
+        scale = (float)target_size / w;
+        w = target_size;
+        h = h * scale;
     }
+    else
+    {
+        scale = (float)target_size / h;
+        h = target_size;
+        w = w * scale;
+    }
+
+    ncnn::Mat in = ncnn::Mat::from_android_bitmap_resize(env, bitmap, ncnn::Mat::PIXEL_BGR, w, h);
+    ncnn::Mat depth_color;
+    g_dpt->detect(in, w, h, depth_color);
+
+    depth_color.to_android_bitmap(env, bitmap, ncnn::Mat::PIXEL_RGB);
 
     return nullptr;
 }

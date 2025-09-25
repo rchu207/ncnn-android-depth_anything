@@ -75,7 +75,7 @@ int Dpt::detect(const ncnn::Mat& in, int w, int h, ncnn::Mat& depth_color)
     cv::Size2i resized_out_size(w, h);
     cv::resize(color_map_(cv::Rect(wpad / 2, hpad / 2, w, h)), resized_out, resized_out_size);
 
-    depth_color.to_pixels(resized_out.data, ncnn::Mat::PIXEL_BGR2RGB);
+    depth_color = ncnn::Mat::from_pixels(resized_out.data, ncnn::Mat::PIXEL_BGR2RGB, resized_out.cols, resized_out.rows);
 
     return 0;
 }
