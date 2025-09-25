@@ -64,8 +64,8 @@ public class MainActivity extends Activity {
                 return;
 
             // TODO: run inference in thread.
-            dpt.infer(yourSelectedImage);
             Bitmap bitmap = yourSelectedImage.copy(Bitmap.Config.ARGB_8888, true);
+            dpt.infer(bitmap);
             imageView.setImageBitmap(bitmap);
         });
 

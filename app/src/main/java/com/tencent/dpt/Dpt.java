@@ -20,7 +20,7 @@ import android.graphics.Bitmap;
 public class Dpt
 {
     public native boolean loadModel(AssetManager mgr, int modelid, int cpugpu);
-    public native Bitmap infer(Bitmap bitmap);
+    public native boolean infer(Bitmap bitmap);
 
     static {
         System.loadLibrary("dpt");

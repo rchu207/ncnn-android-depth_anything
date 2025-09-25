@@ -186,22 +186,26 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_loadModel(JNIEnv* env, jobje
     {
         "518",
         "256",
+        "v2_s",
     };
 
     const int target_sizes[] =
     {
         518,
         256,
+        518,
     };
 
     const float mean_vals[][3] =
     {
         {123.675f, 116.28f,  103.53f},
         {123.675f, 116.28f,  103.53f},
+        {123.675f, 116.28f,  103.53f},
     };
 
     const float norm_vals[][3] =
     {
+        { 0.01712475f, 0.0175f, 0.01742919f },
         { 0.01712475f, 0.0175f, 0.01742919f },
         { 0.01712475f, 0.0175f, 0.01742919f },
     };
@@ -231,20 +235,20 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_loadModel(JNIEnv* env, jobje
     return JNI_TRUE;
 }
 
-// public native Bitmap infer(Bitmap bitmap);
-JNIEXPORT jobject JNICALL Java_com_tencent_dpt_Dpt_infer(JNIEnv* env, jobject thiz, jobject bitmap)
+// public native boolean infer(Bitmap bitmap);
+JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_infer(JNIEnv* env, jobject thiz, jobject bitmap)
 {
     __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "infer");
 
     AndroidBitmapInfo info;
     AndroidBitmap_getInfo(env, bitmap, &info);
     if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888)
-        return nullptr;
+        return JNI_FALSE;
 
     ncnn::MutexLockGuard g(lock);
 
     if (g_dpt == nullptr)
-        return nullptr;
+        return JNI_FALSE;
 
     // ncnn from bitmap
     int target_size = g_dpt->get_target_size();
@@ -274,7 +278,7 @@ JNIEXPORT jobject JNICALL Java_com_tencent_dpt_Dpt_infer(JNIEnv* env, jobject th
 
     depth_color.to_android_bitmap(env, bitmap, ncnn::Mat::PIXEL_RGB);
 
-    return nullptr;
+    return JNI_TRUE;
 }
 
 }
