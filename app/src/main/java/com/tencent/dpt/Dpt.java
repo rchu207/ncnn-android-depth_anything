@@ -16,7 +16,6 @@ package com.tencent.dpt;
 
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
-import android.view.Surface;
 
 public class Dpt
 {

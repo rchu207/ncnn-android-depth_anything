@@ -33,14 +33,10 @@ public class MainActivity extends Activity {
     private static final int SELECT_IMAGE = 1;
 
     private ImageView imageView;
-    private Bitmap bitmap = null;
     private Bitmap yourSelectedImage = null;
 
-    private Dpt dpt = new Dpt();
-    private int facing = 0;
+    private final Dpt dpt = new Dpt();
 
-    private Spinner spinnerModel;
-    private Spinner spinnerCPUGPU;
     private int current_model = 0;
     private int current_cpugpu = 0;
 
@@ -53,33 +49,27 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        imageView = (ImageView) findViewById(R.id.imageView);
+        imageView = findViewById(R.id.imageView);
 
-        Button buttonImage = (Button) findViewById(R.id.buttonImage);
-        buttonImage.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View arg0) {
-                Intent i = new Intent(Intent.ACTION_PICK);
-                i.setType("image/*");
-                startActivityForResult(i, SELECT_IMAGE);
-            }
+        Button buttonImage = findViewById(R.id.buttonImage);
+        buttonImage.setOnClickListener(arg0 -> {
+            Intent i = new Intent(Intent.ACTION_PICK);
+            i.setType("image/*");
+            startActivityForResult(i, SELECT_IMAGE);
         });
 
-        Button buttonDetect = (Button) findViewById(R.id.buttonDetect);
-        buttonDetect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View arg0) {
-                if (yourSelectedImage == null)
-                    return;
+        Button buttonDetect = findViewById(R.id.buttonDetect);
+        buttonDetect.setOnClickListener(arg0 -> {
+            if (yourSelectedImage == null)
+                return;
 
-                // TODO: run inference in thread.
-                dpt.infer(yourSelectedImage);
-                Bitmap bitmap = yourSelectedImage.copy(Bitmap.Config.ARGB_8888, true);
-                imageView.setImageBitmap(bitmap);
-            }
+            // TODO: run inference in thread.
+            dpt.infer(yourSelectedImage);
+            Bitmap bitmap = yourSelectedImage.copy(Bitmap.Config.ARGB_8888, true);
+            imageView.setImageBitmap(bitmap);
         });
 
-        spinnerModel = (Spinner) findViewById(R.id.spinnerModel);
+        Spinner spinnerModel = findViewById(R.id.spinnerModel);
         spinnerModel.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id) {
@@ -94,7 +84,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        spinnerCPUGPU = (Spinner) findViewById(R.id.spinnerCPUGPU);
+        Spinner spinnerCPUGPU = findViewById(R.id.spinnerCPUGPU);
         spinnerCPUGPU.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id) {
@@ -127,43 +117,16 @@ public class MainActivity extends Activity {
             Uri selectedImage = data.getData();
 
             try {
-                if (requestCode == SELECT_IMAGE) {
-                    bitmap = decodeUri(selectedImage);
-                    yourSelectedImage = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-                    imageView.setImageBitmap(bitmap);
+                if (requestCode == SELECT_IMAGE && selectedImage != null) {
+                    Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, null);
+                    if (bitmap != null) {
+                        yourSelectedImage = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+                        imageView.setImageBitmap(bitmap);
+                    }
                 }
             } catch (FileNotFoundException e) {
                 Log.e("MainActivity", "FileNotFoundException");
-                return;
             }
         }
-    }
-
-    private Bitmap decodeUri(Uri selectedImage) throws FileNotFoundException {
-        // Decode image size
-        BitmapFactory.Options o = new BitmapFactory.Options();
-        o.inJustDecodeBounds = true;
-        BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, o);
-
-        // TODO: adjust new size we want to scale to
-        final int REQUIRED_SIZE = 400;
-
-        // Find the correct scale value. It should be the power of 2.
-        int width_tmp = o.outWidth, height_tmp = o.outHeight;
-        int scale = 1;
-//        while (true) {
-//            if (width_tmp / 2 < REQUIRED_SIZE
-//                    || height_tmp / 2 < REQUIRED_SIZE) {
-//                break;
-//            }
-//            width_tmp /= 2;
-//            height_tmp /= 2;
-//            scale *= 2;
-//        }
-
-        // Decode with inSampleSize
-        BitmapFactory.Options o2 = new BitmapFactory.Options();
-        o2.inSampleSize = scale;
-        return BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, o2);
     }
 }
