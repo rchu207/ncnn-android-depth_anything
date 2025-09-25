@@ -5,6 +5,7 @@
         <item>518</item>
         <item>256</item>
         <item>vits</item>
+        <item>vits92542</item>
     </string-array>
     <string-array name="cpugpu_array">
         <item>CPU</item>

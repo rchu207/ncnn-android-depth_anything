@@ -63,10 +63,12 @@ int Dpt::detect(const ncnn::Mat& in, int w, int h, ncnn::Mat& depth_color)
 
     ncnn::Extractor ex = dpt_.create_extractor();
 
-    ex.input("image", in_pad);
+//    ex.input("image", in_pad);
+    ex.input("in0", in_pad);
 
     ncnn::Mat out;
-    ex.extract("depth", out);
+//    ex.extract("depth", out);
+    ex.extract("out0", out);
 
     cv::Mat depth(out.h, out.w, CV_32FC1, (void*)out.data);
     cv::normalize(depth, depth, 0, 255, cv::NORM_MINMAX, CV_8UC1);
