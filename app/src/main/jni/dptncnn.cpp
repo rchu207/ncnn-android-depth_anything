@@ -77,7 +77,7 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_loadModel(JNIEnv* env, jobje
         "518",
         "256",
         "v2_s",
-        "vits92542",
+        "vitsncnn",
     };
 
     const int target_sizes[] =
