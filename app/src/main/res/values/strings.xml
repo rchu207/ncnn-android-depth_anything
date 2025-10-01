@@ -6,6 +6,7 @@
         <item>256</item>
         <item>vits</item>
         <item>vitsncnn</item>
+        <item>vitbmetric</item>
     </string-array>
     <string-array name="cpugpu_array">
         <item>CPU</item>
