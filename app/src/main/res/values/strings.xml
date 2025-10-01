@@ -3,10 +3,8 @@
     <string name="app_name">ncnn-depth_anything</string>
     <string-array name="model_array">
         <item>518</item>
-        <item>256</item>
         <item>vits</item>
-        <item>vitsncnn</item>
-        <item>vitbmetric</item>
+        <item>vitb</item>
     </string-array>
     <string-array name="cpugpu_array">
         <item>CPU</item>

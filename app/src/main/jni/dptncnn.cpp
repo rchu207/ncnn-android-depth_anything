@@ -75,16 +75,12 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_loadModel(JNIEnv* env, jobje
     const char* modeltypes[] =
     {
         "518",
-        "256",
-        "v2_s",
         "vitsncnn",
         "vitbmetric",
     };
 
     const int target_sizes[] =
     {
-        518,
-        256,
         518,
         518,
         518,
@@ -95,14 +91,10 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_loadModel(JNIEnv* env, jobje
         {123.675f, 116.28f,  103.53f},
         {123.675f, 116.28f,  103.53f},
         {123.675f, 116.28f,  103.53f},
-        {123.675f, 116.28f,  103.53f},
-        {123.675f, 116.28f,  103.53f},
     };
 
     const float norm_vals[][3] =
     {
-        { 0.01712475f, 0.0175f, 0.01742919f },
-        { 0.01712475f, 0.0175f, 0.01742919f },
         { 0.01712475f, 0.0175f, 0.01742919f },
         { 0.01712475f, 0.0175f, 0.01742919f },
         { 0.01712475f, 0.0175f, 0.01742919f },
