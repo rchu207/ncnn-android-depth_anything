@@ -13,6 +13,8 @@ Dpt::Dpt()
 
 int Dpt::load(AAssetManager* mgr, const char* modeltype, int _target_size, const float* _mean_vals, const float* _norm_vals, bool use_gpu)
 {
+    __android_log_print(ANDROID_LOG_INFO, "ncnn", "Dpt::load");
+
     dpt_.clear();
     blob_pool_allocator.clear();
     workspace_pool_allocator.clear();
@@ -48,11 +50,14 @@ int Dpt::load(AAssetManager* mgr, const char* modeltype, int _target_size, const
     
     color_map_ = cv::Mat(target_size_, target_size_, CV_8UC3);
 
+    __android_log_print(ANDROID_LOG_INFO, "ncnn", "Dpt::load-done");
     return 0;
 }
 
 int Dpt::detect(const ncnn::Mat& in, int w, int h, ncnn::Mat& depth_color)
 {
+    __android_log_print(ANDROID_LOG_INFO, "ncnn", "Dpt::detect");
+
     // pad to target_size rectangle
     int wpad = target_size_ - w;
     int hpad = target_size_ - h;
@@ -79,6 +84,7 @@ int Dpt::detect(const ncnn::Mat& in, int w, int h, ncnn::Mat& depth_color)
 
     depth_color = ncnn::Mat::from_pixels(resized_out.data, ncnn::Mat::PIXEL_BGR2RGB, resized_out.cols, resized_out.rows);
 
+    __android_log_print(ANDROID_LOG_INFO, "ncnn", "Dpt::detect-done");
     return 0;
 }
 
