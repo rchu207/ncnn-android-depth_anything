@@ -20,6 +20,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -27,7 +28,45 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Spinner;
 
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+class BitmapSaver {
+
+    public static File saveBitmapToFile(Bitmap bitmap, File file, Bitmap.CompressFormat format, int quality) throws IOException {
+        FileOutputStream out = null;
+        try {
+            out = new FileOutputStream(file);
+            bitmap.compress(format, quality, out); // Compress the bitmap to the output stream
+            out.flush();
+        } finally {
+            if (out != null) {
+                out.close();
+            }
+        }
+        return file;
+    }
+
+    // Example usage:
+    public static void saveImage(Bitmap bitmap, String filename) {
+        File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "MyAppImages");
+        if (!directory.exists()) {
+            directory.mkdirs(); // Create the directory if it doesn't exist
+        }
+
+        File imageFile = new File(directory, filename);
+        try {
+            saveBitmapToFile(bitmap, imageFile, Bitmap.CompressFormat.PNG, 100); // Save as PNG with 100% quality
+            // Optionally, you can add the image to MediaStore for it to appear in the gallery
+            // MediaStore.Images.Media.insertImage(context.getContentResolver(), imageFile.getAbsolutePath(), filename, null);
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Handle the error (e.g., show a Toast message)
+        }
+    }
+}
 
 public class MainActivity extends Activity {
     private static final int SELECT_IMAGE = 1;
@@ -67,6 +106,7 @@ public class MainActivity extends Activity {
             Bitmap bitmap = yourSelectedImage.copy(Bitmap.Config.ARGB_8888, true);
             dpt.infer(bitmap);
             imageView.setImageBitmap(bitmap);
+            BitmapSaver.saveImage(bitmap, "out_heatmap.png");
         });
 
         Spinner spinnerModel = findViewById(R.id.spinnerModel);
