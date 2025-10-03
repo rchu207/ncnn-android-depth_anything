@@ -28,6 +28,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Spinner;
 
+import androidx.heifwriter.HeifWriter;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -64,6 +66,32 @@ class BitmapSaver {
         } catch (IOException e) {
             e.printStackTrace();
             // Handle the error (e.g., show a Toast message)
+        }
+    }
+}
+
+class HeifSaver {
+    // Example usage:
+    public static void saveImage(Bitmap bitmap1, Bitmap bitmap2, String filename) {
+        File directory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "MyAppImages");
+        if (!directory.exists()) {
+            directory.mkdirs(); // Create the directory if it doesn't exist
+        }
+
+        File imageFile = new File(directory, filename);
+        HeifWriter.Builder builder = new HeifWriter.Builder(imageFile.getAbsolutePath(), bitmap1.getWidth(), bitmap1.getHeight(), HeifWriter.INPUT_MODE_BITMAP);
+        HeifWriter writer = null;
+        try {
+            writer = builder.build();
+            writer.start();
+            writer.addBitmap(bitmap1);
+            writer.addBitmap(bitmap2);
+            writer.stop(0);
+            writer.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 }
@@ -107,6 +135,7 @@ public class MainActivity extends Activity {
             dpt.infer(bitmap);
             imageView.setImageBitmap(bitmap);
             BitmapSaver.saveImage(bitmap, "out_heatmap.png");
+            HeifSaver.saveImage(yourSelectedImage, bitmap, "out_heatmap.heic");
         });
 
         Spinner spinnerModel = findViewById(R.id.spinnerModel);
