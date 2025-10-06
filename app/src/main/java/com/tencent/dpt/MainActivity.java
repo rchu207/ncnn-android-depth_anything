@@ -82,6 +82,7 @@ class HeifSaver {
         HeifWriter.Builder builder = new HeifWriter.Builder(imageFile.getAbsolutePath(), bitmap1.getWidth(), bitmap1.getHeight(), HeifWriter.INPUT_MODE_BITMAP);
         HeifWriter writer = null;
         try {
+            builder.setMaxImages(2);
             writer = builder.build();
             writer.start();
             writer.addBitmap(bitmap1);
