@@ -18,6 +18,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ImageDecoder;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -34,6 +36,18 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+
+import com.nokia.heif.AuxiliaryProperty;
+import com.nokia.heif.GridImageItem;
+import com.nokia.heif.HEIF;
+import com.nokia.heif.HEVCImageItem;
+import com.nokia.heif.ImageItem;
+import com.nokia.heif.Item;
+import com.nokia.heif.ItemProperty;
+import com.nokia.heif.io.ByteArrayInputStream;
+import com.nokia.heif.io.InputStream;
 
 class BitmapSaver {
 
@@ -98,6 +112,7 @@ class HeifSaver {
 }
 
 public class MainActivity extends Activity {
+    private static String TAG = "NcnnActivity";
     private static final int SELECT_IMAGE = 1;
 
     private ImageView imageView;
@@ -186,6 +201,7 @@ public class MainActivity extends Activity {
         if (resultCode == RESULT_OK && null != data) {
             Uri selectedImage = data.getData();
 
+            // Decode HEIC by BitmapFactory.
             try {
                 if (requestCode == SELECT_IMAGE && selectedImage != null) {
                     Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, null);
@@ -196,6 +212,87 @@ public class MainActivity extends Activity {
                 }
             } catch (FileNotFoundException e) {
                 Log.e("MainActivity", "FileNotFoundException");
+            }
+
+            if (requestCode == SELECT_IMAGE && selectedImage != null) {
+                ImageDecoder.Source src = ImageDecoder.createSource(getContentResolver(), selectedImage);
+                try {
+                    Bitmap bm = ImageDecoder.decodeBitmap(src);
+                    Drawable da = ImageDecoder.decodeDrawable(src);
+                    Log.d(TAG, bm.toString());
+                    Log.d(TAG, da.toString());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            // Decode HEIC by Nokia HEIF library.
+            HEIF heif = new HEIF();
+            try {
+                // Load the file
+                byte[] inputBuffer = getContentResolver().openInputStream(selectedImage).readAllBytes();
+                com.nokia.heif.io.ByteArrayInputStream nokiaInputStream = new ByteArrayInputStream(inputBuffer);
+                heif.load(nokiaInputStream);
+
+                // Get the primary image
+                ImageItem primaryImage = heif.getPrimaryImage();
+
+                Log.e(TAG, "Images=" + heif.getImages().size());
+
+                // Check the type, assuming that it's a HEVC image
+                if (primaryImage instanceof HEVCImageItem) {
+                    HEVCImageItem hevcImageItem = (HEVCImageItem)primaryImage;
+                    byte[] decoderConfig = hevcImageItem.getDecoderConfig().getConfig();
+                    byte[] imageData = hevcImageItem.getItemDataAsArray();
+                    // Feed the data to a decoder
+                    Log.v(TAG, "Ready to decode image.");
+                }
+
+                // Check the type, assuming that it's a Grid image
+                if (primaryImage instanceof GridImageItem) {
+                    GridImageItem gridImageItem = (GridImageItem) primaryImage;
+                    // Go through the grid
+                    for (int rowIndex = 0; rowIndex < gridImageItem.getRowCount(); rowIndex++) {
+                        for (int columnIndex = 0; columnIndex < gridImageItem.getColumnCount(); columnIndex++) {
+                            // We assume that the image items are HEVC
+                            HEVCImageItem hevcImageItem = (HEVCImageItem) gridImageItem.getImage(columnIndex, rowIndex);
+                            byte[] decoderConfig = hevcImageItem.getDecoderConfig().getConfig();
+                            byte[] imageData = hevcImageItem.getItemDataAsArray();
+                            // Feed the data to a decoder
+                            Log.v(TAG, "Ready to decode one of grid image.");
+                            hevcImageItem.getDecoderConfig()
+                        }
+                    }
+                }
+
+                // Check the type to find out the depth image.
+                for (ImageItem item : heif.getImages()) {
+                    boolean hasDepthImage = false;
+                    for (ItemProperty prop : item.getProperties()) {
+                        Log.d(TAG, item.toString());
+                        if (prop instanceof AuxiliaryProperty auxProp) {
+                            if (auxProp.getType().equals(AuxiliaryProperty.DEPTH_URN)) {
+                                hasDepthImage = true;
+                                Log.d(TAG, auxProp.toString());
+                                break;
+                            }
+                        }
+                    }
+
+                    if (hasDepthImage && item instanceof HEVCImageItem) {
+                        HEVCImageItem hevcImageItem = (HEVCImageItem)item;
+//                        byte[] decoderConfig = hevcImageItem.getDecoderConfig().getConfig();
+//                        byte[] imageData = hevcImageItem.getItemDataAsArray();
+                        // Feed the data to a decoder
+                        ImageDecoder.Source src = ImageDecoder.createSource(hevcImageItem.getItemData());
+                        Bitmap bm = ImageDecoder.decodeBitmap(src);
+                        Log.i(TAG, bm.toString());
+                    }
+                }
+            } catch (Exception e) {
+                // All exceptions thrown by the HEIF library are of the same type
+                // Check the error code to see what happened
+                e.printStackTrace();
             }
         }
     }
