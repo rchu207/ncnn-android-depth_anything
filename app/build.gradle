@@ -23,6 +23,7 @@ android {
     }
     dependencies {
         implementation 'com.android.support:support-v4:28.0.0'
-        implementation 'androidx.heifwriter:heifwriter:1.1.0-rc02'
+        implementation 'androidx.annotation:annotation:1.9.1'
+        implementation 'org.jspecify:jspecify:1.0.0'
     }
 }
