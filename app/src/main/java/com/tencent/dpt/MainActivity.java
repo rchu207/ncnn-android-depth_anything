@@ -296,7 +296,7 @@ public class MainActivity extends Activity {
                                 tmp.put(decoderConfig);
                                 tmp.put(imageData);
                                 tmp.rewind();
-                                codec.queueInputBuffer(inputIndex, 0, decoderConfig.lenght + imageData.length, 0, 0);
+                                codec.queueInputBuffer(inputIndex, 0, decoderConfig.length + imageData.length, 0, 0);
                             } else {
                                 continue;
                             }
@@ -320,14 +320,17 @@ public class MainActivity extends Activity {
                         dpt.decode(allData, allData.length);
 
                         // Use ImageDecoder to decode data
-                        ImageDecoder.Source src = ImageDecoder.createSource(bb);
-                        Drawable dw = ImageDecoder.decodeDrawable(src);
+                        {
+                            ImageDecoder.Source src = ImageDecoder.createSource(bb);
+                            ImageDecoder.decodeDrawable(src);
+                        }
 
-                        byte[] inputBuffer2 = getContentResolver().openInputStream(selectedImage).readAllBytes();
-                        dpt.decode(inputBuffer2, inputBuffer2.length);
-                        ImageDecoder.Source src = ImageDecoder.createSource(inputBuffer2);
-                        Bitmap bitmap = ImageDecoder.decodeBitmap(src);
-                        Log.i(TAG, "bitmap=" + bitmap.getWidth() + "x" + bitmap.getHeight());
+                        {
+                            byte[] inputBuffer2 = getContentResolver().openInputStream(selectedImage).readAllBytes();
+                            dpt.decode(inputBuffer2, inputBuffer2.length);
+                            ImageDecoder.Source src = ImageDecoder.createSource(inputBuffer2);
+                            ImageDecoder.decodeBitmap(src);
+                        }
 
                         Log.i(TAG, "iamrafael");
                     }
