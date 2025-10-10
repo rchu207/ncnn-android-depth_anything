@@ -31,6 +31,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <android/imagedecoder.h>
 
 #if __ARM_NEON
 #include <arm_neon.h>
@@ -171,6 +172,25 @@ JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_infer(JNIEnv* env, jobject t
     g_dpt->detect(in, w, h, depth_color);
 
     depth_color.to_android_bitmap(env, bitmap, ncnn::Mat::PIXEL_RGB);
+
+    return JNI_TRUE;
+}
+
+JNIEXPORT jboolean JNICALL Java_com_tencent_dpt_Dpt_decode(JNIEnv* env, jobject thiz, jbyteArray compressedbuf, jint size)
+{
+    AImageDecoder* decoder = nullptr;
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "decode");
+    jboolean coo;
+    void* ptrbuf = env->GetPrimitiveArrayCritical(compressedbuf, &coo);
+    int result = AImageDecoder_createFromBuffer(ptrbuf, size, &decoder);
+    env->ReleasePrimitiveArrayCritical(compressedbuf, ptrbuf, coo);
+    __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "decode:%d", result);
+    if (result == ANDROID_IMAGE_DECODER_SUCCESS) {
+        const AImageDecoderHeaderInfo* info = AImageDecoder_getHeaderInfo(decoder);
+        int32_t width = AImageDecoderHeaderInfo_getWidth(info);
+        int32_t height = AImageDecoderHeaderInfo_getHeight(info);
+        __android_log_print(ANDROID_LOG_DEBUG, "ncnn", "decode:%dx%d", width, height);
+    }
 
     return JNI_TRUE;
 }

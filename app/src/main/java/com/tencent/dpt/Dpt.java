@@ -21,6 +21,7 @@ public class Dpt
 {
     public native boolean loadModel(AssetManager mgr, int modelid, int cpugpu);
     public native boolean infer(Bitmap bitmap);
+    public native boolean decode(byte[] compressedbuf, int size);
 
     static {
         System.loadLibrary("dpt");

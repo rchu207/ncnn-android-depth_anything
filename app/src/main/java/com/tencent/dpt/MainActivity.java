@@ -20,6 +20,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageDecoder;
 import android.graphics.drawable.Drawable;
+import android.media.MediaCodec;
+import android.media.MediaFormat;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -204,23 +206,19 @@ public class MainActivity extends Activity {
             // Decode HEIC by BitmapFactory.
             try {
                 if (requestCode == SELECT_IMAGE && selectedImage != null) {
-                    Bitmap bitmap = BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, null);
-                    if (bitmap != null) {
-                        yourSelectedImage = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-                        imageView.setImageBitmap(bitmap);
-                    }
+                    BitmapFactory.decodeStream(getContentResolver().openInputStream(selectedImage), null, null);
                 }
             } catch (FileNotFoundException e) {
                 Log.e("MainActivity", "FileNotFoundException");
             }
 
+            // Decode HEIC by ImageDecoder.
             if (requestCode == SELECT_IMAGE && selectedImage != null) {
                 ImageDecoder.Source src = ImageDecoder.createSource(getContentResolver(), selectedImage);
                 try {
-                    Bitmap bm = ImageDecoder.decodeBitmap(src);
-                    Drawable da = ImageDecoder.decodeDrawable(src);
-                    Log.d(TAG, bm.toString());
-                    Log.d(TAG, da.toString());
+                    Bitmap bitmap = ImageDecoder.decodeBitmap(src);
+                    yourSelectedImage = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+                    imageView.setImageBitmap(bitmap);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -259,8 +257,6 @@ public class MainActivity extends Activity {
                             byte[] decoderConfig = hevcImageItem.getDecoderConfig().getConfig();
                             byte[] imageData = hevcImageItem.getItemDataAsArray();
                             // Feed the data to a decoder
-                            Log.v(TAG, "Ready to decode one of grid image.");
-                            hevcImageItem.getDecoderConfig()
                         }
                     }
                 }
@@ -281,18 +277,66 @@ public class MainActivity extends Activity {
 
                     if (hasDepthImage && item instanceof HEVCImageItem) {
                         HEVCImageItem hevcImageItem = (HEVCImageItem)item;
-//                        byte[] decoderConfig = hevcImageItem.getDecoderConfig().getConfig();
-//                        byte[] imageData = hevcImageItem.getItemDataAsArray();
+                        byte[] decoderConfig = hevcImageItem.getDecoderConfig().getConfig();
+                        byte[] imageData = hevcImageItem.getItemDataAsArray();
                         // Feed the data to a decoder
-                        ImageDecoder.Source src = ImageDecoder.createSource(hevcImageItem.getItemData());
-                        Bitmap bm = ImageDecoder.decodeBitmap(src);
-                        Log.i(TAG, bm.toString());
+
+                        // Use MediaCodec to decode data.
+                        MediaCodec codec = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_HEVC);
+                        MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_HEVC, 576, 768);
+                        format.setInteger(MediaFormat.KEY_FRAME_RATE, 1);
+                        codec.configure(format, null, null, 0);
+                        codec.start();
+                        while (true) {
+                            int inputIndex = codec.dequeueInputBuffer(-1);
+                            Log.d(TAG, "dequeueInputBuffer=" + inputIndex);
+                            if (inputIndex >= 0) {
+                                ByteBuffer tmp = codec.getInputBuffer(inputIndex);
+                                tmp.clear();
+                                tmp.put(decoderConfig);
+                                tmp.put(imageData);
+                                tmp.rewind();
+                                codec.queueInputBuffer(inputIndex, 0, decoderConfig.lenght + imageData.length, 0, 0);
+                            } else {
+                                continue;
+                            }
+
+                            MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+                            int outputIndex = codec.dequeueOutputBuffer(info, -1);
+                            Log.d(TAG, "dequeueOutputBuffer=" + outputIndex);
+                            if (outputIndex >= 0) {
+                                codec.releaseOutputBuffer(outputIndex, 0);
+                            }
+                            break;
+                        }
+                        codec.stop();
+                        codec.release();
+
+                        // Use native code to decode data.
+                        ByteBuffer bb = ByteBuffer.allocate(decoderConfig.length + imageData.length);
+                        bb.put(decoderConfig);
+                        bb.put(imageData);
+                        byte[] allData = bb.array();
+                        dpt.decode(allData, allData.length);
+
+                        // Use ImageDecoder to decode data
+                        ImageDecoder.Source src = ImageDecoder.createSource(bb);
+                        Drawable dw = ImageDecoder.decodeDrawable(src);
+
+                        byte[] inputBuffer2 = getContentResolver().openInputStream(selectedImage).readAllBytes();
+                        dpt.decode(inputBuffer2, inputBuffer2.length);
+                        ImageDecoder.Source src = ImageDecoder.createSource(inputBuffer2);
+                        Bitmap bitmap = ImageDecoder.decodeBitmap(src);
+                        Log.i(TAG, "bitmap=" + bitmap.getWidth() + "x" + bitmap.getHeight());
+
+                        Log.i(TAG, "iamrafael");
                     }
                 }
             } catch (Exception e) {
                 // All exceptions thrown by the HEIF library are of the same type
                 // Check the error code to see what happened
                 e.printStackTrace();
+                Log.i(TAG, "youarerafael");
             }
         }
     }
